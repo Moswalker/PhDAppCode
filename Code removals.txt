@@ -1,0 +1,40 @@
+cost_attributes = ["Cost_Act", "Cost_Fom", "Cost_Inv","Cost_Comx"]
+#costcheck = ['IMPDEMZ']#checking for dummys
+#if Cost_data[Cost_data["commodity"].isin(scenarioChosen)
+#Yeah so, this one is needed in the if else statement further down, a little silly, but this way I don't call the income into the cost
+cost_attributes2 = ['Cost_Act', 'Cost_Inv', 'Cost_Fom','Cost_Comx', 'Cost_Flo']
+
+# Get the cost data, this one filters out the specific scenario wanted, along with the attributes defined above and then adds the Cost_Flo of the mining operation of gas as well. 
+costs_data = Cost_data[Cost_data["Scenario"].isin(scenarioChosen) & (Cost_data["Attribute"].isin(cost_attributes)) | Cost_data["Scenario"].isin(scenarioChosen) & ((Cost_data["Attribute"] == "Cost_Flo") & (Cost_data["Process"] == "MINGAS1"))]
+
+# #Get the income, which is just the export of electricity
+income_data = Cost_data[Cost_data["Scenario"].isin(scenarioChosen) & (Cost_data["Attribute"] == "Cost_Flo") & (Cost_data["Process"] == "EXPELC-DKW")] 
+
+costs_data['Period'] = costs_data['Period'].astype(int)
+income_data['Period'] = income_data['Period'].astype(int)
+
+milestone_years = sorted(costs_data['Period'].dropna().astype(int).unique())
+
+In the function call document
+#%% Checking values for each 
+for i in range(1,10):
+    print(results[0]['timeseries_stoch_stochastic'][i]['cash_flow'][-1],f'Stoch {i}')
+for i in range(1,4):  
+    print(results[0]['timeseries_stoch_spines'][i]['cash_flow'][-1],f'Spines {i}')
+print('Det',detresults['cash_flow'][-1])
+#Stochresults = Cash_flow_bar_stoch_avg(file_path, run)
+
+In the det result function, under "removed notes here"
+        #elif attribute == 'Cost_Inv':
+        #    if vintage == 2025 and process in ['ELERNWINDOFF8', 'ELERNWINDOFF20', 'ELERNWINDOFF30']:
+        #        investment_year = 2026
+        #    elif vintage == 2025 and process == 'ELERNWINDON':
+        #        investment_year = 2027
+        #    elif vintage == 2030 and process in ['ELERNWSUN01', 'ELERNWSUN02', 'ELCTEGAS01']:
+        #        investment_year = 2029
+        #    elif vintage == 2030 and process == 'ELERNWINDON':
+        #        investment_year = 2028
+        #    else:
+        #        investment_year = vintage
+
+        #    costs[investment_year] = costs.get(investment_year, 0) + (value * -1)
