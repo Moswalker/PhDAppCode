@@ -1,4 +1,5 @@
 """
+Made by Lucas Moshøj as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
 Cost data plot
 """
 import numpy as np

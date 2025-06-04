@@ -1,5 +1,6 @@
 """
-This file is used for calling cashflow and capacity functions
+Made by Lucas Moshøj as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
+This file is used for calling cashflow and capacity data visualization functions
 """
 import os
 import numpy as np
