@@ -113,8 +113,9 @@ def CAPplot(file_path, scenarioChosen, run):
             ax.legend(loc='upper left',fontsize=L)
             ax.grid(axis='y', linestyle='--', alpha=0.7)
             plt.tight_layout()
-            if year == 2045:
-                plt.savefig(f'{run} Capacity {name}.png', bbox_inches='tight')
+            #Uncomment to save graph
+            #if year == 2045:
+            #    plt.savefig(f'{run} Capacity {name}.png', bbox_inches='tight')
             plt.show()
         else: 
             #print(Capfilter)

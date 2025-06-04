@@ -20,7 +20,7 @@ os.chdir(current_folder)
 #%% Import all functions defined for data loading and visualization 
 
 from Batch_export_load import load_data # Sets delimiters and groups to ignore
-from texttofloat import texttofloat #
+from texttofloat import texttofloat 
 from Costplots import costplot
 from Capplots import Cap_bar_plot, CAPplot 
 from Cashflow_functions import Cash_flow_bar_stoch_avg_with_stack, Cash_flow_bar_stoch_avg2, Cash_flow_bar_det
