@@ -97,6 +97,7 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
                         
                         #Similar explanation to above
                         for year in (range(2030, 2033) if period == 2030 else period_to_years[period]):
+                            #get costs associated with given year or return 0, cumulative costs
                             costs[year] = costs.get(year, 0) + yearly_value
                             
                             # Also add to cost_components stack breakdown
@@ -112,15 +113,19 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
                     #Some investments happen before 2030, for the sake of NPV calculations, I assume they payments fall in 2030.
                     for year in (range(2030, 2033) if period == 2030 else period_to_years[period]):
                         
+                        #get costs associated with given year or return 0, cumulative costs
                         costs[year] = costs.get(year, 0) + yearly_value
                         #stack cost components
                         cost_components[attribute][year] = cost_components[attribute].get(year, 0) + yearly_value
-            
+            #Sort the combined set of years into ascending order
             all_years = sorted(set(costs.keys()).union(set(income.keys())))
+            
             #Prepare arrays
             yearly_costs, yearly_income, cumulative_cash_flow_values, cash_flow_normal = [], [], [], []
             total_cash_flow = 0
-
+            
+            #Calculating yearly cashflow, cumulative cashflow and costs
+            #for every milestone year
             for year in all_years:
                 cost = costs.get(year, 0)
                 income_value = income.get(year, 0)
@@ -139,13 +144,14 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
                 "cash_flow2": cash_flow_normal,
                 "cost_components": cost_components
             }
-        #
+        #Calculating NPVs for the given scenario, using numpy financial
         npv_values = {sow: sum(results[sow]["cash_flow2"]) for sow in unique_sows}
         irr_values = {sow: npf.irr(results[sow]["cash_flow2"]) for sow in unique_sows}
-        #
         npv_results[scenario] = npv_values
         irr_results[scenario] = irr_values
         
+        #complete, sorted list of all years where any SOW has activity
+        #https://www.w3schools.com/python/ref_set_union.asp
         all_years = sorted(set().union(*(res["years"] for res in results.values())))
         avg_costs, min_cash_flow, max_cash_flow, std_costs = [], [], [], []
         
@@ -164,6 +170,7 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
         # Sum the stacked averages to get overall average cost
         for i in range(len(all_years)):
             avg_costs.append(sum(stacked_avg_costs[attr][i] for attr in ['Cost_Act', 'Cost_Comx', 'Cost_Fom', 'Cost_Flo']))
+            
             # Compute std deviation of overall costs across SOWs
             year_costs = []
             for sow in unique_sows:
@@ -174,31 +181,45 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
                     year_costs.append(0)
             std_costs.append(np.std(year_costs))
         
+        #Prepping to save the milestone years in which the max and minflow crosses 0
         zero_crossing_years[scenario] = {}
         
+        #Definitions used to define when the max and min cashflow crosses 0
         min_sow = None
         max_sow = None
-        min_cross_year = -float("inf")  # Change from inf to -inf
-        max_cross_year = float("inf")
+        min_cross_year = -float("inf")  # if no minimum crossing year is found it crossed before 2030, somehow, indicating an error
+        max_cross_year = float("inf") #If no maximum crossing year is found, it does not cross within the timeframe, setting it to inf
         
+        #Finding cash flow based on crossing year
         for sow in unique_sows:
             cash_flow = results[sow]["cash_flow"]
             years = results[sow]["years"]
             
+            #finds the first year where cumulative cash flow greater than 0, if none, set = inf
             cross_year = next((years[i] for i in range(len(cash_flow)) if cash_flow[i] >= 0), float("inf"))
             zero_crossing_years[scenario][sow] = cross_year
             
+            #If current cross year is smaller than last recorded cross year,
+            #set new max cross year (max as in max cash flow, the earlier the better)
             if cross_year < max_cross_year:
                 max_cross_year = cross_year
                 max_sow = sow
+            #same as above but for min cashflow cross year
             if cross_year > min_cross_year:
                 min_cross_year = cross_year
                 min_sow = sow
+        
+        
+        #if true, all SOWS have equal crossing year
+        #This would mean there is no min or max from the last loop
+        #so min and max cashflows will be based on final cumulative cashflow values
         if min_cross_year == max_cross_year:
-            cash_flow_final_maxold = 0
-            cash_flow_final_minold = 100000;
-            final_year = all_years[-1]
+            cash_flow_final_maxold = 0 #random small value
+            cash_flow_final_minold = 100000; #random large value
+            #final_year = all_years[-1]
             
+            #loop over all SOWs and find the final cumulative cashflow value
+            #Redefine max and min SOW cashflow
             for sow in unique_sows:
                 cash_flow_final_max = results[sow]["cash_flow"][-1]
                 if cash_flow_final_max > cash_flow_final_maxold:
@@ -206,33 +227,34 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
                     max_sow = sow
                 if cash_flow_final_max < cash_flow_final_minold:
                     cash_flow_final_minold = cash_flow_final_max
-                    min_sow = sow  
-            #HERE!!!\n            
-            # New logic: 
-            #Check the final cumulative cash flow for all SOWs and select the SOW with the largest final value as max, and smallest as min.
+                    min_sow = sow          
 
-        # (After computing avg_costs, std_costs, and stacked_avg_costs)
-        zero_crossing_years[scenario] = {}
+        
+        #If a minimum cash flow and max cash flow scenario was found, save these as they will be plotted
         if min_sow is not None and max_sow is not None:
             min_cash_flow = results[min_sow]["cash_flow"]
             max_cash_flow = results[max_sow]["cash_flow"]
         else:
-            raise ValueError("No valid SOWs found for min or max cumulative cash flow crossing.")
-
+            raise ValueError("No SOWs found for min or max cash flow.")
+        
+        #
         representative_sow = unique_sows[0]
         income_years = results[representative_sow]["years"]
         income_values = results[representative_sow]["income"]
-
+        
+        #Some automatic naming during the loop, based on scenario
         if scenario == 'timeseries_stoch_stochastic':
             Scenname = 'Stochastic'
         else:
             Scenname = 'Spines'
-
+            
         
+        #first figure, 
         fig, ax = plt.subplots(figsize=(10, 6))
         bar_width = 0.4
+        
         x_positions = np.arange(len(all_years))
-        #print(stacked_avg_costs)
+        
         # Stacked bars for costs
         cost_labels = ["Cost_Inv","Cost_Act", "Cost_Fom", "Cost_Comx", "Cost_Flo"]
         cost_names =  ["Annuity loan","Var OPEX", "Fix OPEX", "CO2 tax", "Import"]
@@ -243,53 +265,15 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
                 ax.bar(x_positions, stacked_avg_costs[cost_label], width=bar_width, bottom=stacked_bottom, label=name, color=colour)
                 stacked_bottom += stacked_avg_costs[cost_label]
                 #print(stacked_avg_costs[cost_label])
-        #yerr=std_costs
-        percentage_contributions = {}
 
-        # Calculate the percentage for each cost component
-        for cost_label in cost_labels:
-            if cost_label in stacked_avg_costs:
-                values = np.array(stacked_avg_costs[cost_label]).flatten()  # Ensure 1D array
-                # Avoid division by zero
-                percentages = (values / stacked_bottom) * 100  # Calculate percentage
-                percentage_contributions[cost_label] = percentages
-        
-        # Dictionary to store the averaged percentage contributions for each cost_label
-        averaged_percentage_contributions = {}
-
-        for cost_label in percentage_contributions:
-            # Flatten to 1D array to avoid shape issues
-            contribution_values = np.array(percentage_contributions[cost_label]).flatten()
-
-            # Step 1: Average the first three values
-            avg_first_three = np.mean(contribution_values[:3])
-
-            # Step 2: Group the remaining values in chunks of 5 and average
-            avg_remaining = []
-            for i in range(3, len(contribution_values), 5):
-                chunk = contribution_values[i:i + 5]  # Take a chunk of 5 values
-                avg_remaining.append(np.mean(chunk))
-
-            # Ensure exactly 4 values: trim or pad with NaN as needed
-            avg_values = [avg_first_three] + avg_remaining
-            avg_values = avg_values[:4]  # Ensure only 4 values
-            while len(avg_values) < 4:
-                avg_values.append(np.nan)  # Pad with NaN if not enough values
-
-            # Store the averaged percentage contribution values
-            averaged_percentage_contributions[cost_label] = avg_values
-
-        #Uncomment to output the averaged results
-        #for cost_label, avg_values in averaged_percentage_contributions.items():
-        #    print(f"{Scenname}: Averaged percentage contributions for {cost_label}: {avg_values}")
-        
-        # Income bar, activate if cashflow
+        # Income bar
         ax.bar(x_positions, income_values, width=bar_width, color="green", alpha=0.7, label="Income")
         
-        # Cumulative cash flow, activate if cashflow
+        # Cumulative cash flow
         ax.plot(x_positions, max_cash_flow, label="Max Cash Flow", color="darkorange", linestyle="dashed", marker="^")
         ax.plot(x_positions, min_cash_flow, label="Min Cash Flow", color="darkorange", linestyle="dotted", marker="v")
-
+        
+        #plot settings
         ax.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
         ax.set_title(f"Cashflow for {Scenname} model")
         ax.set_xlabel("Year", fontsize=M)
@@ -298,26 +282,17 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
         ax.set_xticklabels(all_years, rotation=45, fontsize=M)
         plt.yticks(fontsize=M)
         
-        #Activate if cashflow
-        #ax.legend(loc='upper left',ncol=4) #loc='upper left',
-        #If only costs
-        #ax.legend(loc='best',ncol=5)
-        #ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05),
-        
         #  ncol=3, fancybox=True, shadow=True)
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5),fontsize=M)
         #plt.legend(bbox_to_anchor=(0.5, 1.2), loc='upper center',ncol=4)
+        
         ax.grid(axis="y", linestyle="--", alpha=0.7)
         
-        #Activate if cashflow
-        #plt.savefig(f'{run}_CashFlow_{Scenname}.png', bbox_inches='tight')
-        #For only costs
-        #plt.savefig(f'{run}_Costs_{Scenname}.png', bbox_inches='tight')
-        
-        #Uncommented the savefunction, but it functions.
+        #Uncommented the save function if needed
         #plt.savefig(f'{run}_CashFlowCost_{Scenname}.png',bbox_inches='tight')
         plt.show()
         
+        #Second figure, showing cashflow trajectories
         plt.figure(figsize=(10, 6))
         for sow in unique_sows:
             plt.plot(results[sow]["years"], results[sow]["cash_flow"], label=f"SOW {int(sow)}", alpha=0.5)
@@ -338,15 +313,16 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
         #plt.savefig(f'{run}_Cash_Flow_Trajectories_{Scenname}.png', bbox_inches='tight')
         plt.show()
         
-        std_dev_results[scenario]=std_costs 
-
+        #Save results for output
+        #std_dev_results[scenario]=std_costs 
         std_dev_results[scenario] = std_costs
         total_results[scenario] = results
     return [std_dev_results, npv_results, irr_results, zero_crossing_years], [total_results]
 
 
 
-#%% Second function 
+#%% Second function, mostly similar to above, but not with stacked costs
+#As the purpose is mostly similar, documentation has not been added here
 def Cash_flow_bar_stoch_avg2(file_path, run):
 
     data = pd.read_csv(file_path, delimiter=';', decimal=",")

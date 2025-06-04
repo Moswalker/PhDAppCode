@@ -22,7 +22,7 @@ os.chdir(current_folder)
 from Batch_export_load import load_data # Sets delimiters and groups to ignore
 from texttofloat import texttofloat #
 from Costplots import costplot
-from Capplot import Cap_bar_plot, CAPplot 
+from Capplots import Cap_bar_plot, CAPplot 
 from Cashflow_functions import Cash_flow_bar_stoch_avg_with_stack, Cash_flow_bar_stoch_avg2, Cash_flow_bar_det
 
 #Setting the main scenario you would like to analyze, relevant through some of the functions
@@ -64,53 +64,11 @@ file_path = 'Cost_related_attributes.csv'
 #Stochresults provide the categorized costs along with the min and max cashflow for the future scenarios
 Stochresults, results = Cash_flow_bar_stoch_avg_with_stack(file_path, run)
 
-#%%Stochresults2 provide the average costs with error bars across the future scenarios, with min and max cashflows
+#%tochresults2 provide the average costs with error bars across the future scenarios, with min and max cashflows
 Stochresults2, results = Cash_flow_bar_stoch_avg2(file_path, run)
 
 #%%Deterministic only has one future scenario, but otherwise provides the broken down costs same as Stochresults
 detresults = Cash_flow_bar_det(file_path, run)
-
-
-#%%
-#Convert relevant values from the Stochresults to an excel file.
-
-Scenarios = ['timeseries_stoch_stochastic','timeseries_stoch_spines', 'deterministic']
-
-Values = ["Std_value","NPV", "IRR","Crossing year"]
-Xcelname = ["Stoch","Spine", 'Det']
-i = 0
-writer = pd.ExcelWriter(f'Results_{run}.xlsx', engine='xlsxwriter')
-
-for Valuename in Values:
-    #Stochresults[i]
-    
-    for Scenname, Excelname in zip(Scenarios, Xcelname):
-       if Excelname == 'Det':
-           #if Valuename == "Std_value":
-               continue
-           #elif Valuename == "NPV":
-           
-          #     Dataframe = (pd.DataFrame({Valuename:detresults[0]}))
-          #     Dataframe.to_excel(writer, sheet_name=f'{Valuename}_{Excelname}')
-          # elif Valuename == "IRR":
-          #     Dataframe = (pd.DataFrame({Valuename:detresults[1]}))
-          #     Dataframe.to_excel(writer, sheet_name=f'{Valuename}_{Excelname}')
-          # else:
-           #    Dataframe = (pd.DataFrame({Valuename:detresults[2]}))
-           #    Dataframe.to_excel(writer, sheet_name=f'{Valuename}_{Excelname}')
-        #print(Scenname)
-       #print(Excelname)
-       else:
-           Dataframe = (pd.DataFrame({Valuename:Stochresults[i][Scenname]}))
-           Dataframe.to_excel(writer, sheet_name=f'{Valuename}_{Excelname}')
-       
-    i=+1
-Dataframe = pd.DataFrame([{'NPV':detresults[0],'IRR':detresults[1], 'Cross':detresults[2]}])
-Dataframe.to_excel(writer, sheet_name='Det_all')
-       #Open the file for writing (this ensures it's handled correctly)
-writer.close()#with open(f'Std_value_{name}.txt', 'w') as file:
-       #    for item in WThis:
-       #    file.write(str(item) + "\n")
 
 
 

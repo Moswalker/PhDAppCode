@@ -1,4 +1,5 @@
 """
+This code was written by Lucas Moshoej as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
 Fixing text strings
 """
 import pandas as pd

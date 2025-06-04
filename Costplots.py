@@ -59,8 +59,8 @@ def costplot(Cost_data, scenarioChosen):
             # Stacked bar for costs
             bottom = 0  # Start stacking from zero
             
-            #A little silly, but I have to redefine the cost_attributes that I had from before, 
-            #as it does not include cost_flo, as that would also save the cost_flo export value, which is the income.. so..
+            #I have to redefine the cost_attributes that I had from before, 
+            #as it does not include cost_flo, as that would also save the cost_flo export value, which is the income
             
             for cost, attr in zip(year_costs['Pv'], cost_attributes2):
                
