@@ -1,6 +1,7 @@
 """
-Made by Lucas Moshøj as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
-Cost data plot
+This code was written by Lucas Moshoej as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
+
+Cost plots (CAPEX, FOM, VAROM)
 """
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ def costplot(Cost_data, scenarioChosen):
     
     #This part provides an overview of the cost and income data, and is used for plots further down
     cost_attributes = ["Cost_Act", "Cost_Fom", "Cost_Inv","Cost_Comx"]
-    #costcheck = ['IMPDEMZ']#checking for dummys
+    #costcheck = ['IMPDEMZ'] #checking for dummy values
     
     #This line below is needed in the if else statement further down, to insure the income is not called into the cost
     cost_attributes2 = ['Cost_Act', 'Cost_Inv', 'Cost_Fom','Cost_Comx', 'Cost_Flo']
@@ -24,24 +25,27 @@ def costplot(Cost_data, scenarioChosen):
 
     # #Get the income, which is just the export of electricity
     income_data = Cost_data[Cost_data["Scenario"].isin(scenarioChosen) & (Cost_data["Attribute"] == "Cost_Flo") & (Cost_data["Process"] == "EXPELC-DKW")] 
-
+    
+    
     costs_data['Period'] = costs_data['Period'].astype(int)
     income_data['Period'] = income_data['Period'].astype(int)
 
     milestone_years = sorted(costs_data['Period'].dropna().astype(int).unique())
-
+    
+    #The deterministic model does not have any SOWS and it was a bit messy with the plots. So a rigid solution was chosen. 
     if scenarioChosen == ['deterministic']:
-        #scenname='Deterministic'
-        # the deterministic does not have any sows and it messed with the plots so this is a little rigid but oh well
+        
+        #Loop over milestone years
         for year in milestone_years:
             
+            #
             year_costs = costs_data[costs_data["Period"] == year]
             year_income = income_data[income_data["Period"] == year]
 
             
-            
+
             total_cost = sum(year_costs['Pv'])
-            #Income is in a 
+          
             income_value = -year_income['Pv'].sum() #simply to handle the dataframe, there is only the cost_flo income, so this simply returns it as the float I need
             profit_value = income_value - total_cost
 

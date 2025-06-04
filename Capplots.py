@@ -1,38 +1,20 @@
 """
-Cap data
+This code was written by Lucas Moshoej as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
+
+Installed capacity plots
 """
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-def latexCAP(Capdata, scenarioChosen):
-    Capfilter = Capdata[(Capdata['Attribute']=='VAR_Cap') & (Capdata['Scenario']==scenarioChosen[0])]
+S = 10
+M= 12
+L = 14
 
-    #Found guide online: https://www.youtube.com/watch?v=gLalZyodYqs
-    latex_table = Capfilter[['Process', 'Pv', 'Period', 'Sow']].to_latex(
-        index=False,  # Do not include the index of the dataFrame. did that at first
-        header=['Technology', 'Capacity (GW)', 'Year', 'SOW'],  
-        caption="VAR_Cap Values for 2040",  # add caption. 
-        label="tab:var_cap_2040"  # for referencing in LaTeX
-        )
 
-    #get out the table to copy paste.
-    print(latex_table)
-    return latex_table
-
-#old test data
-#data = {
-#    'Attribute': ['VAR_Cap', 'VAR_Cap', 'Other', 'VAR_Cap'],
-#    'Period': [2030, 2040, 2040, 2045],
-#    'Process': ['Tech1', 'Tech2', 'Tech3', 'Tech4'],
-#    'Pv': [10, 20, 30, 40]
-#    }
 def CAPplot(file_path, scenarioChosen, run):
-    
-    S = 10
-    M= 12
-    L = 14
+
     # Load the data
     Capdata = pd.read_csv(file_path, delimiter=';', decimal=",")
     years = sorted(Capdata['Period'].unique())
@@ -95,8 +77,9 @@ def CAPplot(file_path, scenarioChosen, run):
             plt.xticks(rotation=30, ha='right',fontsize=M)
             plt.yticks(fontsize=M)
             plt.tight_layout()
-            if year == 2045:
-                plt.savefig(f'{run} Capacity {name}.png', bbox_inches='tight')
+            #Uncomment to save graph
+            #if year == 2045:
+                #plt.savefig(f'{run} Capacity {name}.png', bbox_inches='tight')
             plt.show()
         #else:
         elif scenarioChosen=='timeseries_stoch_stochastic': # Stochastic plot
@@ -151,11 +134,13 @@ def CAPplot(file_path, scenarioChosen, run):
             plt.xticks(rotation=30, ha='right',fontsize=M)
             plt.yticks(fontsize=M)
             plt.tight_layout()
-            if year == 2045:
-                plt.savefig(f'{run} Capacity {name}.png', bbox_inches='tight')
+            #Uncomment to save graph
+            #if year == 2045:
+            #    plt.savefig(f'{run} Capacity {name}.png', bbox_inches='tight')
             plt.show()
     return
 
+#%%
 def Cap_bar_plot(file_path, run):
     # Load the data
     data = pd.read_csv(file_path, delimiter=';', decimal=",")
@@ -243,3 +228,20 @@ def Cap_bar_plot(file_path, run):
         plt.show()
 
     return
+
+
+#%%Work in progress
+def latexCAP(Capdata, scenarioChosen):
+    Capfilter = Capdata[(Capdata['Attribute']=='VAR_Cap') & (Capdata['Scenario']==scenarioChosen[0])]
+
+    #Found guide online: https://www.youtube.com/watch?v=gLalZyodYqs
+    latex_table = Capfilter[['Process', 'Pv', 'Period', 'Sow']].to_latex(
+        index=False,  # Do not include the index of the dataFrame. did that at first
+        header=['Technology', 'Capacity (GW)', 'Year', 'SOW'],  
+        caption="VAR_Cap Values for 2040",  # add caption. 
+        label="tab:var_cap_2040"  # for referencing in LaTeX
+        )
+
+    #get the table to copy paste.
+    print(latex_table)
+    return latex_table

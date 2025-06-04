@@ -1,5 +1,6 @@
 """
-Made by Lucas Moshøj as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
+This code was written by Lucas Moshoej as a part of the Master thesis: Investment Optimization of an Energy Capacity Portfolio using Stochastic Modelling
+
 All up to date and relevant cashflow functions
 """
 import numpy as np
@@ -7,33 +8,44 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy_financial as npf
 
-# Early defined text sizes
+# Used for text sizes
 S = 10
 M = 12
 L = 14
 
 #%% First function breaks down the costs into stackable bars and provides a cashflow overview
+"PhD - this function"
 def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
-
+    
+    #Read in data
     data = pd.read_csv(filepath, delimiter=';', decimal=",")
     data['Period'] = pd.to_numeric(data['Period'], errors='coerce')  
     data['Vintage'] = pd.to_numeric(data['Vintage'], errors='coerce')
     data['Pv'] = pd.to_numeric(data['Pv'], errors='coerce')
     data['Sow'] = pd.to_numeric(data['Sow'], errors='coerce')  
-
+    
+    #define model run scenario names in the data file
     scenarios = ['timeseries_stoch_stochastic', 'timeseries_stoch_spines']
+    
+    #Prepare dictonaries
     std_dev_results = {}
     npv_results = {}
     irr_results = {}
     zero_crossing_years = {}
     total_results = {}
+    
+    #loop over model scenario runs defined just above
     for scenario in scenarios:
-        print(scenario)
+        
+        #Only access data which coincides with the gievn scenario
         scenario_data = data[data['Scenario'] == scenario]
         
+        #Find the amount of unique States of the World in a given scenario run.
         unique_sows = scenario_data['Sow'].dropna().unique()
+        #prep dictonary for intermediary results
         results = {}
-
+        
+        #Manually defines the range that the milestone years encompass.
         period_to_years = {
             2025: range(2022, 2028),
             2030: range(2028, 2033),
@@ -41,42 +53,71 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
             2040: range(2038, 2043),
             2045: range(2043, 2048)
         }
-
+        
+        #Loop over each unique state of the world
         for sow in unique_sows:
+            #Save all data relevant to current SOW
             sow_data = scenario_data[scenario_data['Sow'] == sow]
-            
+            #prep dictionary
             costs = {}
             income = {}
             cumulative_cash_flow = {}
+            
             # Create a dictionary for cost breakdown by attribute
             cost_components = {attr: {} for attr in ['Cost_Act', 'Cost_Comx', 'Cost_Fom', 'Cost_Flo','Cost_Inv' ]}
             
-            for _, row in sow_data.iterrows():
-                attribute = row['Attribute']
-                process = row['Process']
-                period = row['Period']
-                vintage = row['Vintage']
-                value = row['Pv']
-
+            "PhD"
+            #Looking through the content of the SOW rows
+            for _, row in sow_data.iterrows(): 
+                #Define names for each row
+                attribute = row['Attribute'] #Cost attributes, Fixed Operational Maintenance (FOM), for example
+                process = row['Process'] #Processes such as Export or import of electricity
+                period = row['Period'] #Period is the milestone year where an aggregated process takes place
+                vintage = row['Vintage'] #Vintage is when the technology was installed
+                value = row['Pv'] #Values
+                
+                #if the attribute is related to cost, enter
                 if attribute in ['Cost_Act', 'Cost_Comx', 'Cost_Fom', 'Cost_Flo']:
+                    
+                    #if the attribute is the export process, enter
                     if attribute == 'Cost_Flo' and process == 'EXPELC-DKW':
-                        # For income, do not add to cost_components
-                        yearly_value = (-value) #/ (3 if period in (2030, 2022, 2025) else len(period_to_years[period]))
+                        
+                        #Export is the income process in this model
+                        #In the output it is defined as a negative value however, so I flip that for the plots
+                        yearly_value = (-value) 
+                        
+                        #Spread the income, which is aggregated based on the milestones, across the milestone ranges as defined in period_to_years
+                        #The smaller range for 2030 is to fold the small maintenance cost values appearing before 2030 into 2030, where income starts.
                         for year in (range(2030, 2033) if period in (2030,2022,2025) else period_to_years[period]):
                             income[year] = income.get(year, 0) + yearly_value
                     else:
-                        yearly_value = (-value) #/ (3 if period == 2030 else len(period_to_years[period]))
+                        #If the Cost_Flo attribute is not assigned to EXPELC-DKW it is a cost. 
+                        #Costs are positive in the model output and so have been flipped as well
+                        yearly_value = (-value)
+                        
+                        #Similar explanation to above
                         for year in (range(2030, 2033) if period == 2030 else period_to_years[period]):
                             costs[year] = costs.get(year, 0) + yearly_value
-                            # Also add to cost_components breakdown
+                            
+                            # Also add to cost_components stack breakdown
                             cost_components[attribute][year] = cost_components[attribute].get(year, 0) + yearly_value
+                
+                #If investment cost
                 elif attribute == 'Cost_Inv':
-                    yearly_value = (-value) #/ (3 if period == 2030 else len(period_to_years[period]))
-                    #print(yearly_value)
+                    #flip the positive output value to negative
+                    yearly_value = (-value) 
+                    
+                    #print(yearly_value) #old print to check if value seemed correct
+                    
+                    #Some investments happen before 2030, for the sake of NPV calculations, I assume they payments fall in 2030.
                     for year in (range(2030, 2033) if period == 2030 else period_to_years[period]):
+                        
                         costs[year] = costs.get(year, 0) + yearly_value
+                        #stack cost components
                         cost_components[attribute][year] = cost_components[attribute].get(year, 0) + yearly_value
+            
             all_years = sorted(set(costs.keys()).union(set(income.keys())))
+            #Prepare arrays
             yearly_costs, yearly_income, cumulative_cash_flow_values, cash_flow_normal = [], [], [], []
             total_cash_flow = 0
 
@@ -267,6 +308,7 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5),fontsize=M)
         #plt.legend(bbox_to_anchor=(0.5, 1.2), loc='upper center',ncol=4)
         ax.grid(axis="y", linestyle="--", alpha=0.7)
+        
         #Activate if cashflow
         #plt.savefig(f'{run}_CashFlow_{Scenname}.png', bbox_inches='tight')
         #For only costs
@@ -301,6 +343,7 @@ def Cash_flow_bar_stoch_avg_with_stack(filepath,run):
         std_dev_results[scenario] = std_costs
         total_results[scenario] = results
     return [std_dev_results, npv_results, irr_results, zero_crossing_years], [total_results]
+
 
 
 #%% Second function 
@@ -716,7 +759,7 @@ def Cash_flow_bar_det(file_path, run):
     #ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
     #plt.savefig(f'{run}_CashFlow_deterministic', bbox_inches='tight')
-    plt.savefig(f'{run}_CashFlowCost_deterministic', bbox_inches='tight')
+    #plt.savefig(f'{run}_CashFlowCost_deterministic', bbox_inches='tight')
     plt.show()
 
     # **Print NPV, IRR, and Break-even Year**
